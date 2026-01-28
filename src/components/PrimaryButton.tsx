@@ -1,5 +1,6 @@
 import React from 'react';
 import { Pressable, Text, StyleSheet, GestureResponderEvent } from 'react-native';
+import { Colors } from '../theme/colors';
 
 type Props = {
   label: string;
@@ -25,7 +26,7 @@ export default function PrimaryButton({ label, onPress, disabled }: Props) {
 
 const styles = StyleSheet.create({
   button: {
-    backgroundColor: '#fbbf24',
+    backgroundColor: Colors.primary,
     paddingVertical: 14,
     paddingHorizontal: 20,
     borderRadius: 999,
@@ -39,11 +40,10 @@ const styles = StyleSheet.create({
     opacity: 0.4,
   },
   label: {
-    color: '#020617',
+    color: Colors.textPrimary,
     fontSize: 16,
     fontWeight: '600',
     letterSpacing: 0.5,
   },
 });
-
 

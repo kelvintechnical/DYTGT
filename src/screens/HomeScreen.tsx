@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import ScreenContainer from '../components/ScreenContainer';
 import PrimaryButton from '../components/PrimaryButton';
@@ -6,15 +6,24 @@ import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../navigation';
 import { getVerseForToday } from '../data/dailyVerses';
 import { useStreak } from '../state/StreakContext';
+import { useSubscription } from '../state/SubscriptionContext';
+import { Colors } from '../theme/colors';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Home'>;
 
 export default function HomeScreen({ navigation }: Props) {
   const verse = getVerseForToday();
   const { hasThankedToday, markThankedToday, currentStreak } = useStreak();
+  const { isSubscribedOrOnTrial } = useSubscription();
+
+  useEffect(() => {
+    if (!isSubscribedOrOnTrial) {
+      navigation.replace('Paywall');
+    }
+  }, [isSubscribedOrOnTrial, navigation]);
 
   const handleThanked = async () => {
-    if (!hasThankedToday) {
+    if (!hasThankedToday && isSubscribedOrOnTrial) {
       await markThankedToday();
     }
   };
@@ -34,12 +43,20 @@ export default function HomeScreen({ navigation }: Props) {
       </View>
       <View style={styles.footer}>
         <PrimaryButton
-          label={hasThankedToday ? 'You thanked God today' : 'I Thanked God Today'}
+          label={
+            !isSubscribedOrOnTrial
+              ? 'Subscription required'
+              : hasThankedToday
+              ? 'You thanked God today'
+              : 'I Thanked God Today'
+          }
           onPress={handleThanked}
-          disabled={hasThankedToday}
+          disabled={hasThankedToday || !isSubscribedOrOnTrial}
         />
         <Text style={styles.footerText}>
-          One thank-you a day is enough. When you’re ready, come back tomorrow.
+          {isSubscribedOrOnTrial
+            ? 'One thank-you a day is enough. When you’re ready, come back tomorrow.'
+            : 'Start your free trial to thank God once a day with a verse and reflection.'}
         </Text>
       </View>
     </ScreenContainer>
@@ -56,11 +73,11 @@ const styles = StyleSheet.create({
   appTitle: {
     fontSize: 18,
     fontWeight: '700',
-    color: '#e5e7eb',
+    color: Colors.textPrimary,
   },
   streak: {
     fontSize: 14,
-    color: '#fbbf24',
+    color: Colors.success,
   },
   body: {
     flex: 1,
@@ -69,18 +86,18 @@ const styles = StyleSheet.create({
   },
   reference: {
     fontSize: 14,
-    color: '#9ca3af',
+    color: Colors.textSecondary,
     textTransform: 'uppercase',
     letterSpacing: 1.4,
   },
   text: {
     fontSize: 20,
-    color: '#e5e7eb',
+    color: Colors.textPrimary,
     lineHeight: 28,
   },
   reflection: {
     fontSize: 15,
-    color: '#9ca3af',
+    color: Colors.textSecondary,
   },
   footer: {
     paddingBottom: 24,
@@ -88,9 +105,7 @@ const styles = StyleSheet.create({
   },
   footerText: {
     fontSize: 12,
-    color: '#6b7280',
+    color: Colors.textSecondary,
     textAlign: 'center',
   },
 });
-
-

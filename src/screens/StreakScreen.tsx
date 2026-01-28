@@ -5,6 +5,7 @@ import PrimaryButton from '../components/PrimaryButton';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../navigation';
 import { useStreak } from '../state/StreakContext';
+import { Colors } from '../theme/colors';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Streak'>;
 
@@ -37,25 +38,25 @@ const styles = StyleSheet.create({
   },
   label: {
     fontSize: 14,
-    color: '#9ca3af',
+    color: Colors.textSecondary,
     textTransform: 'uppercase',
     letterSpacing: 1.4,
   },
   count: {
     fontSize: 56,
     fontWeight: '800',
-    color: '#fbbf24',
+    color: Colors.success,
   },
   caption: {
     fontSize: 14,
-    color: '#d1d5db',
+    color: Colors.textSecondary,
     textAlign: 'center',
     paddingHorizontal: 24,
   },
   status: {
     marginTop: 8,
     fontSize: 13,
-    color: '#9ca3af',
+    color: Colors.textSecondary,
   },
   footer: {
     paddingBottom: 24,

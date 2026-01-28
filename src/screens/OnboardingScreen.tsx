@@ -5,6 +5,7 @@ import PrimaryButton from '../components/PrimaryButton';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../navigation';
 import { useSubscription } from '../state/SubscriptionContext';
+import { Colors } from '../theme/colors';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Onboarding'>;
 
@@ -49,13 +50,13 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 28,
     fontWeight: '700',
-    color: '#e5e7eb',
+    color: Colors.textPrimary,
     letterSpacing: 2,
   },
   subtitle: {
     marginTop: 4,
     fontSize: 14,
-    color: '#9ca3af',
+    color: Colors.textSecondary,
   },
   middle: {
     flex: 1,
@@ -63,7 +64,7 @@ const styles = StyleSheet.create({
   },
   body: {
     fontSize: 16,
-    color: '#d1d5db',
+    color: Colors.textSecondary,
     lineHeight: 24,
     textAlign: 'center',
   },

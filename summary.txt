@@ -1,0 +1,239 @@
+DYTGT (Did You Thank God Today) - AI Scaffold Summary
+====================================================
+
+Scope:
+Minimalist React Native (Expo + TypeScript) Bible gratitude app with daily verse, reflection,
+single "I Thanked God Today" action, streaks, and subscription/paywall scaffolding.
+
+1) Project Initialization
+-------------------------
+- Created a new Expo project using the TypeScript blank template in the DYTGT directory.
+- Confirmed base files: App.tsx, app.json, index.ts, package.json, tsconfig.json, assets, etc.
+- Set app.json to use dark mode by default (userInterfaceStyle: "dark").
+
+2) Navigation & Architecture
+----------------------------
+- Added src/navigation/index.tsx with a React Navigation native stack:
+  - Routes: Onboarding, Auth, Paywall, Home, Streak, Settings.
+  - RootNavigator chooses initial screen based on onboarding + subscription state.
+  - Applied a custom dark navigation theme (later to be aligned with palette).
+- Updated App.tsx:
+  - Wrapped the app in SubscriptionProvider and StreakProvider.
+  - Rendered AppNavigation and set StatusBar style to "light".
+
+3) Theme & Palette
+------------------
+- Created src/theme/colors.ts with the provided olive/sage palette:
+  - LightColors: primary #6B8E23, background #FAF9F6, surface #F1F0EB,
+    textPrimary #2F2F2F, textSecondary #6E6E6E, accent #A3B18A, success #7A9F35.
+  - DarkColors: primary #8FAF3A, background #1E1F1A, surface #2A2C24,
+    textPrimary #E8E8E5, textSecondary #B6B6B2, accent #9FB08C, success #7A9F35.
+  - Exported Colors = DarkColors (dark-mode-first baseline).
+(Note: individual components still mostly use hard-coded colors and can be refactored
+to consume Colors for full theming.)
+
+4) Shared Components
+--------------------
+- src/components/ScreenContainer.tsx:
+  - SafeAreaView + padded View, dark background (#020617), vertical spacing layout.
+- src/components/PrimaryButton.tsx:
+  - Pill-shaped primary button with:
+    - Background: #fbbf24 (to be swapped to palette primary later).
+    - Pressed and disabled state opacity.
+    - Label text styled for emphasis.
+
+5) Static Data (Daily Verses)
+-----------------------------
+- src/data/dailyVerses.ts:
+  - Defined DailyVerse type (id, reference, text, reflection).
+  - Created a small array of sample verses and 1–2 sentence reflections.
+  - Implemented getVerseForToday(date) that picks a verse based on day-of-month index.
+
+6) Streak State & Persistence
+-----------------------------
+- src/state/StreakContext.tsx:
+  - Uses React Context + AsyncStorage to track:
+    - currentStreak (number).
+    - lastThankedDate (ISO string or null).
+    - hasThankedToday (boolean).
+  - Keys: "dytgt:streak" and "dytgt:lastThankedDate".
+  - Logic:
+    - On load, reads stored streak and lastThankedDate, sets hasThankedToday if same calendar day.
+    - isSameDay helper compares year/month/day.
+    - markThankedToday():
+      - If no last date, sets streak to 1.
+      - If already thanked today, keeps current streak.
+      - Otherwise increments streak by 1.
+      - Persists new streak and today’s ISO date to AsyncStorage.
+
+7) Subscription & Onboarding State
+----------------------------------
+- src/state/SubscriptionContext.tsx:
+  - Tracks:
+    - isLoading (initial bootstrap).
+    - isOnboarded (boolean, persisted in AsyncStorage under "dytgt:onboarded").
+    - isSubscribedOrOnTrial (boolean, driven by RevenueCat entitlements).
+    - markOnboarded() (sets value and persists to AsyncStorage).
+    - refreshSubscription() (re-checks RevenueCat entitlements on demand).
+  - Bootstrap effect:
+    - Reads onboarding flag from AsyncStorage.
+    - Calls configureRevenueCat() once on startup.
+    - Calls checkEntitlements() and sets isSubscribedOrOnTrial based on ENTITLEMENT_PRO.
+- src/navigation/index.tsx integrates this context:
+  - While isLoading is true, shows a minimalist splash screen:
+    - Olive-toned background using Colors.background.
+    - App logo, "DYTGT" title, and subtitle.
+  - Picks initialRouteName:
+    - Onboarding if not onboarded.
+    - Paywall if onboarded but not subscribed/trial.
+    - Home if onboarded and subscribed/trial.
+
+8) RevenueCat Integration
+-------------------------
+- src/config/subscriptions.ts:
+  - Placeholder constants:
+    - REVENUECAT_API_KEY_IOS, REVENUECAT_API_KEY_ANDROID.
+    - ENTITLEMENT_PRO.
+    - MONTHLY_PRODUCT_ID ("dytgt_monthly"), YEARLY_PRODUCT_ID ("dytgt_yearly").
+- src/state/RevenueCatClient.ts:
+  - configureRevenueCat():
+    - Selects API key based on Platform (iOS/Android).
+    - No-op if key is missing or still a placeholder.
+    - Calls Purchases.configure({ apiKey }) when valid.
+  - checkEntitlements():
+    - Fetches customerInfo from Purchases.getCustomerInfo().
+    - Returns true if ENTITLEMENT_PRO is active.
+  - purchaseMonthly() / purchaseYearly():
+    - Load offerings via Purchases.getOfferings().
+    - Find the package whose storeProduct.identifier matches MONTHLY_PRODUCT_ID / YEARLY_PRODUCT_ID.
+    - Call Purchases.purchasePackage(selected) and return whether ENTITLEMENT_PRO is active.
+  - restorePurchasesAndCheck():
+    - Calls Purchases.restorePurchases().
+    - Returns whether ENTITLEMENT_PRO is active.
+
+9) Screens & Daily Loop
+-----------------------
+- src/screens/OnboardingScreen.tsx:
+  - Shows app logo, title "DYTGT", and subtitle message.
+  - Explains the daily rhythm in a short paragraph.
+  - "Begin" button:
+    - Calls markOnboarded() from SubscriptionContext.
+    - Navigates to Auth screen (navigation.replace("Auth")).
+
+- src/screens/AuthScreen.tsx:
+  - Simple sign-in copy and three primary buttons:
+    - "Continue anonymously".
+    - "Continue with Apple".
+    - "Continue with Google".
+  - All handlers are TODO stubs that navigate to Paywall for now.
+  - Designed to be wired to Firebase Auth later.
+
+- src/screens/PaywallScreen.tsx:
+  - Headline and subtitle describing the subscription and free trial.
+  - Two pricing cards:
+    - Monthly: $4.99 / month, 7-day free trial.
+    - Yearly: $9.99 / year, 7-day free trial, best value.
+  - Uses the olive/sage theme:
+    - Card surfaces use Colors.surface with accent borders.
+    - Text colors use Colors.textPrimary / textSecondary.
+  - For each plan:
+    - Calls purchaseMonthly() / purchaseYearly().
+    - Calls refreshSubscription() from SubscriptionContext, then navigates to Home when active.
+    - Shows alerts on failure or when entitlement is not yet active.
+  - "Restore purchases" link:
+    - Calls restorePurchasesAndCheck().
+    - Calls refreshSubscription() and routes to Home when a subscription is restored.
+  - Shows an inline loading row with ActivityIndicator + message while contacting the store.
+
+- src/screens/HomeScreen.tsx:
+  - Core daily loop:
+    - Header:
+      - App title "DYTGT" styled with Colors.textPrimary.
+      - Tappable streak summary (Colors.success) that navigates to Streak screen.
+    - Body:
+      - Displays verse.reference, verse.text, and verse.reflection from getVerseForToday().
+      - Typography uses Colors.textPrimary and Colors.textSecondary.
+    - Subscription gating:
+      - If isSubscribedOrOnTrial is false, immediately redirects to Paywall (navigation.replace("Paywall")).
+    - Footer button:
+      - Label:
+        - "Subscription required" when not entitled.
+        - "I Thanked God Today" when not yet completed.
+        - "You thanked God today" after completion.
+      - Disabled when:
+        - Subscription/trial is inactive, or
+        - User has already thanked God today.
+      - When active, calls markThankedToday() and updates the streak.
+    - Footer copy:
+      - Adjusts message depending on whether the user is entitled or not.
+
+- src/screens/StreakScreen.tsx:
+  - Shows:
+    - "Current streak" label.
+    - Large numeric streak display using currentStreak from useStreak(), colored with Colors.success.
+    - Short encouragement about building a daily habit.
+    - Status text: "You thanked God today." vs "Today is still open."
+  - Footer button "Back to today" navigates back to previous screen.
+  - All text colors refactored to use the theme.
+
+- src/screens/SettingsScreen.tsx:
+  - Buttons:
+    - "Restore purchases" (wired to restorePurchasesAndCheck + refreshSubscription()).
+    - "Log out" (TODO for real Firebase sign-out; currently resets nav to Auth).
+    - "Delete account" (TODO for account deletion implementation).
+  - Footer copy reinforces no ads and the focused nature of the app.
+  - Shows a loading row and ActivityIndicator while restore is in progress.
+
+10) Theme Refactor & Splash
+---------------------------
+- Refactored core components and screens to use Colors from src/theme/colors.ts:
+  - ScreenContainer now uses Colors.background.
+  - PrimaryButton uses Colors.primary for background and Colors.textPrimary for label text.
+  - Onboarding, Auth, Home, Paywall, Streak, and Settings screens use Colors.textPrimary,
+    Colors.textSecondary, Colors.surface, Colors.accent, and Colors.success.
+- Added a minimalist splash/loading state in src/navigation/index.tsx shown while
+  SubscriptionContext is bootstrapping:
+  - Uses the app logo, brand title, and subtitle on an olive-toned background.
+
+11) README.md
+-------------
+- Added a comprehensive README covering:
+  - Project overview and philosophy.
+  - Feature list (daily verse, reflection, streaks, auth, subscriptions).
+  - Tech stack (Expo, React Native, TypeScript, React Navigation, AsyncStorage, Firebase Auth, RevenueCat).
+  - Subscription pricing (7-day trial, $4.99/month, $9.99/year).
+  - Access logic (IF subscriptionActive OR trialActive → home, ELSE → paywall).
+  - Project structure summary.
+  - Environment variable and configuration notes for Firebase and RevenueCat.
+  - Local development setup and run commands.
+  - Notes for future work: wiring real auth, full RevenueCat integration, optional cloud sync.
+
+12) Git Setup & GitHub Push
+---------------------------
+- Initialized a git repository in the DYTGT project directory:
+  - git init
+  - git branch -M main
+  - git remote add origin https://github.com/kelvintechnical/DYTGT.git
+- Staged and committed all files:
+  - Commit message:
+    "Initial commit: DYTGT MVP scaffold with auth, subscriptions, and daily gratitude loop"
+- Pushed to GitHub:
+  - git push -u origin main
+  - Repository URL: https://github.com/kelvintechnical/DYTGT
+
+Current Status (High-Level)
+---------------------------
+- Expo + TypeScript app scaffold is complete and pushed to GitHub.
+- Navigation, core screens, and local streak/onboarding state are implemented.
+- RevenueCat integration is wired at the client level:
+  - Startup configuration + entitlement checks in SubscriptionContext.
+  - Purchase and restore flows in Paywall and Settings using RevenueCat helpers.
+- The olive/sage dark theme is centralized and applied across primary UI surfaces and text.
+- The daily loop:
+  - Respects subscription/trial gating (Home redirects to Paywall if not entitled).
+  - Ensures the "I Thanked God Today" button is both gated by subscription and limited to one tap per day.
+- Remaining major work:
+  - Wire real Firebase Authentication.
+  - Replace placeholder RevenueCat keys and product identifiers with production values.
+  - Optionally add cloud sync for streaks and preferences.
+

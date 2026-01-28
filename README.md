@@ -22,13 +22,16 @@ No feeds, no noise—just Scripture, reflection, and a growing streak of daily g
   - Authentication flow designed for:
     - Anonymous sign‑in (MVP first).
     - Apple / Google sign‑in via Firebase (scaffolded, not yet wired).
-- **Subscriptions & Paywall (Scaffolded)**
-  - Mandatory subscription model concept:
+- **Subscriptions & Paywall**
+  - Mandatory subscription model:
     - 7‑day free trial.
     - **$4.99 / month**.
     - **$9.99 / year**.
-  - RevenueCat SDK wired in at the client level (configuration, entitlement check helpers).
-  - Paywall screen with monthly & yearly options and restore‑purchases entry point.
+  - RevenueCat SDK wired in at the client level:
+    - Configuration & entitlement helpers.
+    - Purchase helpers for monthly and yearly plans.
+    - Restore‑purchases helper that re‑checks entitlements.
+  - Paywall screen with monthly & yearly options, loading state, and restore‑purchases entry point.
 - **Settings**
   - Stubs for:
     - Restore purchases.
@@ -52,7 +55,7 @@ No feeds, no noise—just Scripture, reflection, and a growing streak of daily g
   - Anonymous
   - Apple
   - Google
-- **Subscriptions (planned)**: RevenueCat SDK
+- **Subscriptions**: RevenueCat SDK
   - Native in‑app purchases via App Store / Google Play.
   - Entitlement management and receipt validation.
 
@@ -66,7 +69,7 @@ All app access is designed to sit behind a subscription managed by RevenueCat:
 - **$4.99 / month** subscription.
 - **$9.99 / year** subscription (best value).
 
-Access logic (conceptual):
+Access logic:
 
 ```text
 IF subscriptionActive OR trialActive
@@ -75,11 +78,16 @@ ELSE
   → show paywall
 ```
 
-In the current scaffold:
+In the current implementation:
 
-- RevenueCat is set up at the client level (API key placeholders and entitlement check helpers).
-- The `SubscriptionContext` is ready to be extended with real entitlement state.
-- Purchase and restore flows in the Paywall and Settings screens are stubbed with TODOs.
+- RevenueCat is set up at the client level (API key placeholders still need to be replaced).
+- `SubscriptionContext`:
+  - Calls `configureRevenueCat()` once on startup.
+  - Uses `checkEntitlements()` to set `isSubscribedOrOnTrial`.
+  - Exposes `refreshSubscription()` for screens to sync entitlement state after purchases or restores.
+- Paywall + Settings screens:
+  - Use `purchaseMonthly()`, `purchaseYearly()`, and `restorePurchasesAndCheck()` helpers.
+  - Update entitlement state and navigate to Home when a valid subscription is detected.
 
 ---
 
@@ -121,7 +129,7 @@ DYTGT/
       StreakScreen.tsx       # Streak summary view
       SettingsScreen.tsx     # Restore, logout, delete account stubs
     state/
-      SubscriptionContext.tsx# Onboarding + entitlement state (scaffolded)
+      SubscriptionContext.tsx# Onboarding + entitlement state (RevenueCat-backed)
       StreakContext.tsx      # Local streak state & persistence
       RevenueCatClient.ts    # RevenueCat configure + entitlement helper
     config/

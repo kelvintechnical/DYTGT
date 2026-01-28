@@ -4,6 +4,7 @@ import ScreenContainer from '../components/ScreenContainer';
 import PrimaryButton from '../components/PrimaryButton';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../navigation';
+import { Colors } from '../theme/colors';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Auth'>;
 
@@ -52,12 +53,12 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 24,
     fontWeight: '700',
-    color: '#e5e7eb',
+    color: Colors.textPrimary,
   },
   subtitle: {
     marginTop: 8,
     fontSize: 14,
-    color: '#9ca3af',
+    color: Colors.textSecondary,
   },
   body: {
     flex: 1,
@@ -72,7 +73,7 @@ const styles = StyleSheet.create({
   },
   footerText: {
     fontSize: 12,
-    color: '#6b7280',
+    color: Colors.textSecondary,
     textAlign: 'center',
   },
 });

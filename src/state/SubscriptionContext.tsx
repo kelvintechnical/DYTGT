@@ -1,11 +1,13 @@
 import React, { createContext, useContext, useEffect, useState, ReactNode } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { configureRevenueCat, checkEntitlements } from './RevenueCatClient';
 
 type SubscriptionContextValue = {
   isLoading: boolean;
   isOnboarded: boolean;
   isSubscribedOrOnTrial: boolean;
   markOnboarded: () => Promise<void>;
+  refreshSubscription: () => Promise<void>;
 };
 
 const SubscriptionContext = createContext<SubscriptionContextValue | undefined>(undefined);
@@ -17,14 +19,23 @@ export function SubscriptionProvider({ children }: { children: ReactNode }) {
   const [isOnboarded, setIsOnboarded] = useState(false);
   const [isSubscribedOrOnTrial, setIsSubscribedOrOnTrial] = useState(false);
 
+  const refreshSubscription = async () => {
+    try {
+      const active = await checkEntitlements();
+      setIsSubscribedOrOnTrial(active);
+    } catch {
+      setIsSubscribedOrOnTrial(false);
+    }
+  };
+
   useEffect(() => {
     const bootstrap = async () => {
       try {
         const onboardedValue = await AsyncStorage.getItem(ONBOARDED_KEY);
         setIsOnboarded(onboardedValue === 'true');
 
-        // TODO: Replace with real RevenueCat entitlement check
-        setIsSubscribedOrOnTrial(false);
+        await configureRevenueCat();
+        await refreshSubscription();
       } finally {
         setIsLoading(false);
       }
@@ -45,6 +56,7 @@ export function SubscriptionProvider({ children }: { children: ReactNode }) {
         isOnboarded,
         isSubscribedOrOnTrial,
         markOnboarded,
+        refreshSubscription,
       }}
     >
       {children}
@@ -59,5 +71,4 @@ export function useSubscription() {
   }
   return ctx;
 }
-
 

@@ -1,15 +1,34 @@
-import React from 'react';
-import { View, Text, StyleSheet } from 'react-native';
+import React, { useState } from 'react';
+import { View, Text, StyleSheet, Alert, ActivityIndicator } from 'react-native';
 import ScreenContainer from '../components/ScreenContainer';
 import PrimaryButton from '../components/PrimaryButton';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../navigation';
+import { restorePurchasesAndCheck } from '../state/RevenueCatClient';
+import { useSubscription } from '../state/SubscriptionContext';
+import { Colors } from '../theme/colors';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Settings'>;
 
 export default function SettingsScreen({ navigation }: Props) {
+  const { refreshSubscription } = useSubscription();
+  const [isProcessing, setIsProcessing] = useState(false);
+
   const handleRestore = async () => {
-    // TODO: RevenueCat restore purchases
+    try {
+      setIsProcessing(true);
+      const active = await restorePurchasesAndCheck();
+      await refreshSubscription();
+      if (active) {
+        Alert.alert('Restored', 'Your subscription has been restored.');
+      } else {
+        Alert.alert('No active subscription found', 'We could not find an active subscription to restore.');
+      }
+    } catch (error) {
+      Alert.alert('Restore failed', 'Something went wrong while restoring purchases. Please try again.');
+    } finally {
+      setIsProcessing(false);
+    }
   };
 
   const handleLogout = async () => {
@@ -30,7 +49,7 @@ export default function SettingsScreen({ navigation }: Props) {
         <Text style={styles.title}>Settings</Text>
       </View>
       <View style={styles.body}>
-        <PrimaryButton label="Restore purchases" onPress={handleRestore} />
+        <PrimaryButton label="Restore purchases" onPress={handleRestore} disabled={isProcessing} />
         <View style={styles.spacer} />
         <PrimaryButton label="Log out" onPress={handleLogout} />
         <View style={styles.spacer} />
@@ -38,6 +57,12 @@ export default function SettingsScreen({ navigation }: Props) {
       </View>
       <View style={styles.footer}>
         <Text style={styles.footerText}>No ads. No feeds. Just Scripture, reflection, and gratitude.</Text>
+        {isProcessing && (
+          <View style={styles.loadingRow}>
+            <ActivityIndicator color={Colors.primary} />
+            <Text style={styles.loadingText}>Checking your subscription…</Text>
+          </View>
+        )}
       </View>
     </ScreenContainer>
   );
@@ -50,7 +75,7 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 24,
     fontWeight: '700',
-    color: '#e5e7eb',
+    color: Colors.textPrimary,
   },
   body: {
     flex: 1,
@@ -64,9 +89,17 @@ const styles = StyleSheet.create({
   },
   footerText: {
     fontSize: 12,
-    color: '#6b7280',
+    color: Colors.textSecondary,
     textAlign: 'center',
   },
+  loadingRow: {
+    marginTop: 12,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  loadingText: {
+    fontSize: 12,
+    color: Colors.textSecondary,
+  },
 });
-
-

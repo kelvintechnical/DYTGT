@@ -1,5 +1,6 @@
 import React, { ReactNode } from 'react';
 import { SafeAreaView, View, StyleSheet } from 'react-native';
+import { Colors } from '../theme/colors';
 
 type Props = {
   children: ReactNode;
@@ -16,7 +17,7 @@ export default function ScreenContainer({ children }: Props) {
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: '#020617',
+    backgroundColor: Colors.background,
   },
   container: {
     flex: 1,
@@ -25,5 +26,4 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
   },
 });
-
 
