@@ -1,0 +1,113 @@
+# Azure DevOps CI/CD pipeline for DYTGT
+# Triggers: main and develop (exclude README.md-only changes)
+# Variables: NODE_VERSION, EXPO_VERSION
+
+variables:
+  NODE_VERSION: '18.x'
+  EXPO_VERSION: 'latest'
+
+trigger:
+  branches:
+    include:
+      - main
+      - develop
+  paths:
+    exclude:
+      - README.md
+
+stages:
+  # Stage 1: Validate (lint, type check, tests, coverage)
+  - stage: Validate
+    displayName: 'Validate'
+    jobs:
+      - job: ValidateJob
+        displayName: 'Lint, type check, and test'
+        pool:
+          vmImage: 'ubuntu-latest'
+        steps:
+          - task: NodeTool@0
+            inputs:
+              versionSpec: $(NODE_VERSION)
+            displayName: 'Install Node.js'
+
+          - script: npm ci
+            displayName: 'npm ci'
+
+          - script: npm run lint
+            displayName: 'Lint'
+            continueOnError: false
+
+          - script: npx tsc --noEmit
+            displayName: 'TypeScript check'
+            continueOnError: false
+
+          - script: npm test -- --coverage --ci
+            displayName: 'Run tests with coverage'
+            continueOnError: false
+
+          - task: PublishTestResults@2
+            condition: always()
+            inputs:
+              testResultsFormat: 'JUnit'
+              testResultsFiles: '**/junit.xml'
+              failTaskOnFailedTests: true
+            displayName: 'Publish test results (JUnit)'
+
+          - task: PublishCodeCoverageResults@2
+            condition: always()
+            inputs:
+              codeCoverageTool: 'Cobertura'
+              summaryFileLocation: '**/coverage/cobertura-coverage.xml'
+              reportDirectory: '$(System.DefaultWorkingDirectory)/coverage'
+            displayName: 'Publish code coverage (Cobertura)'
+
+  # Stage 2: Security audit
+  - stage: Security
+    displayName: 'Security'
+    jobs:
+      - job: AuditJob
+        displayName: 'npm audit'
+        pool:
+          vmImage: 'ubuntu-latest'
+        steps:
+          - task: NodeTool@0
+            inputs:
+              versionSpec: $(NODE_VERSION)
+            displayName: 'Install Node.js'
+
+          - script: npm ci
+            displayName: 'npm ci'
+
+          - script: npm audit --audit-level=high
+            displayName: 'npm audit (high)'
+            continueOnError: true
+
+  # Stage 3: Build (main branch only, macOS for Expo)
+  - stage: Build
+    displayName: 'Build'
+    condition: and(succeeded(), eq(variables['Build.SourceBranch'], 'refs/heads/main'))
+    jobs:
+      - job: BuildJob
+        displayName: 'EAS build'
+        pool:
+          vmImage: 'macos-latest'
+        steps:
+          - task: NodeTool@0
+            inputs:
+              versionSpec: $(NODE_VERSION)
+            displayName: 'Install Node.js'
+
+          - script: npm ci
+            displayName: 'npm ci'
+
+          - script: npm install -g eas-cli@$(EXPO_VERSION)
+            displayName: 'Install Expo EAS CLI'
+
+          - script: npx eas-cli login --non-interactive --api-key $(EXPO_TOKEN)
+            displayName: 'Login to Expo'
+            env:
+              EXPO_TOKEN: $(EXPO_TOKEN)
+
+          - script: npx eas-cli build --platform all --non-interactive
+            displayName: 'EAS build (placeholder)'
+            continueOnError: true

@@ -33,3 +33,4 @@ export function getVerseForToday(date = new Date()): DailyVerse {
 
 
 
+

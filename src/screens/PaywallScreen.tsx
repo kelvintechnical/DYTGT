@@ -23,11 +23,11 @@ export default function PaywallScreen({ navigation }: Props) {
   const handleStartTrialMonthly = async () => {
     try {
       setIsProcessing(true);
-      const active = await purchaseMonthly();
+      const result = await purchaseMonthly();
       await refreshSubscription();
-      if (active) {
+      if (result.success) {
         navigation.replace('Home');
-      } else {
+      } else if (!result.cancelled) {
         Alert.alert('Subscription not active', 'We could not activate your monthly subscription yet.');
       }
     } catch (error) {
@@ -40,11 +40,11 @@ export default function PaywallScreen({ navigation }: Props) {
   const handleStartTrialYearly = async () => {
     try {
       setIsProcessing(true);
-      const active = await purchaseYearly();
+      const result = await purchaseYearly();
       await refreshSubscription();
-      if (active) {
+      if (result.success) {
         navigation.replace('Home');
-      } else {
+      } else if (!result.cancelled) {
         Alert.alert('Subscription not active', 'We could not activate your yearly subscription yet.');
       }
     } catch (error) {

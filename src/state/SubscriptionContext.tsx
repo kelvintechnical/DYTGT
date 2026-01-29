@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useEffect, useState, ReactNode } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { logger } from '../services/logger';
 import { configureRevenueCat, checkEntitlements } from './RevenueCatClient';
 
 type SubscriptionContextValue = {
@@ -8,6 +9,7 @@ type SubscriptionContextValue = {
   isSubscribedOrOnTrial: boolean;
   markOnboarded: () => Promise<void>;
   refreshSubscription: () => Promise<void>;
+  error?: Error | null;
 };
 
 const SubscriptionContext = createContext<SubscriptionContextValue | undefined>(undefined);
@@ -23,8 +25,10 @@ export function SubscriptionProvider({ children }: { children: ReactNode }) {
     try {
       const active = await checkEntitlements();
       setIsSubscribedOrOnTrial(active);
-    } catch {
+      logger.info('Entitlements checked', { active });
+    } catch (err) {
       setIsSubscribedOrOnTrial(false);
+      logger.warn('refreshSubscription failed', { error: err });
     }
   };
 
@@ -34,8 +38,13 @@ export function SubscriptionProvider({ children }: { children: ReactNode }) {
         const onboardedValue = await AsyncStorage.getItem(ONBOARDED_KEY);
         setIsOnboarded(onboardedValue === 'true');
 
+        logger.info('Configuring RevenueCat');
         await configureRevenueCat();
         await refreshSubscription();
+      } catch (err) {
+        logger.error('Subscription bootstrap failed', err instanceof Error ? err : undefined, {
+          message: err instanceof Error ? err.message : String(err),
+        });
       } finally {
         setIsLoading(false);
       }
@@ -47,6 +56,7 @@ export function SubscriptionProvider({ children }: { children: ReactNode }) {
   const markOnboarded = async () => {
     setIsOnboarded(true);
     await AsyncStorage.setItem(ONBOARDED_KEY, 'true');
+    logger.info('User marked onboarded');
   };
 
   return (
@@ -57,6 +67,7 @@ export function SubscriptionProvider({ children }: { children: ReactNode }) {
         isSubscribedOrOnTrial,
         markOnboarded,
         refreshSubscription,
+        error: undefined,
       }}
     >
       {children}

@@ -1,30 +1,46 @@
 import Purchases, { CustomerInfo, PurchasesOfferings, PurchasesPackage } from 'react-native-purchases';
 import { Platform } from 'react-native';
-import {
-  ENTITLEMENT_PRO,
-  REVENUECAT_API_KEY_ANDROID,
-  REVENUECAT_API_KEY_IOS,
-  MONTHLY_PRODUCT_ID,
-  YEARLY_PRODUCT_ID,
-} from '../config/subscriptions';
+import { RevenueCatConfig } from '../config/subscriptions';
+import { ErrorCode, SubscriptionError } from '../utils/errors';
 
-export async function configureRevenueCat() {
+export type PurchaseResult = { success: boolean; cancelled?: boolean };
+
+export async function configureRevenueCat(): Promise<void> {
   const apiKey = Platform.select({
-    ios: REVENUECAT_API_KEY_IOS,
-    android: REVENUECAT_API_KEY_ANDROID,
-    default: REVENUECAT_API_KEY_ANDROID,
+    ios: RevenueCatConfig.ios,
+    android: RevenueCatConfig.android,
+    default: RevenueCatConfig.android,
   });
 
   if (!apiKey || apiKey.startsWith('REPLACE_')) {
     return;
   }
 
-  await Purchases.configure({ apiKey });
+  try {
+    await Purchases.configure({ apiKey });
+  } catch (err) {
+    if (__DEV__) {
+      console.error('RevenueCat configure failed:', err);
+    }
+    throw new SubscriptionError(
+      'Failed to configure subscription service',
+      ErrorCode.SUBSCRIPTION_CONFIG_FAILED,
+      true,
+      err
+    );
+  }
 }
 
 export async function checkEntitlements(): Promise<boolean> {
-  const customerInfo = await Purchases.getCustomerInfo();
-  return customerInfo.entitlements.active[ENTITLEMENT_PRO] != null;
+  try {
+    const customerInfo = await Purchases.getCustomerInfo();
+    return customerInfo.entitlements.active[RevenueCatConfig.entitlement] != null;
+  } catch (err) {
+    if (__DEV__) {
+      console.error('checkEntitlements failed:', err);
+    }
+    return false;
+  }
 }
 
 async function findPackageByProductId(offerings: PurchasesOfferings, productId: string): Promise<PurchasesPackage | null> {
@@ -33,31 +49,87 @@ async function findPackageByProductId(offerings: PurchasesOfferings, productId: 
 }
 
 async function hasActiveEntitlement(customerInfo: CustomerInfo): Promise<boolean> {
-  return customerInfo.entitlements.active[ENTITLEMENT_PRO] != null;
+  return customerInfo.entitlements.active[RevenueCatConfig.entitlement] != null;
 }
 
-export async function purchaseMonthly(): Promise<boolean> {
-  const offerings = await Purchases.getOfferings();
-  const selected = await findPackageByProductId(offerings, MONTHLY_PRODUCT_ID);
-  if (!selected) {
-    throw new Error('Monthly package not found. Check MONTHLY_PRODUCT_ID and RevenueCat offerings.');
-  }
-  const { customerInfo } = await Purchases.purchasePackage(selected);
-  return hasActiveEntitlement(customerInfo);
+function isPurchaseCancelledError(err: unknown): boolean {
+  const e = err as { code?: string; userCancelled?: boolean };
+  return e?.code === ErrorCode.PURCHASE_CANCELLED || e?.userCancelled === true;
 }
 
-export async function purchaseYearly(): Promise<boolean> {
-  const offerings = await Purchases.getOfferings();
-  const selected = await findPackageByProductId(offerings, YEARLY_PRODUCT_ID);
-  if (!selected) {
-    throw new Error('Yearly package not found. Check YEARLY_PRODUCT_ID and RevenueCat offerings.');
+export async function purchaseMonthly(): Promise<PurchaseResult> {
+  try {
+    const offerings = await Purchases.getOfferings();
+    const selected = await findPackageByProductId(offerings, RevenueCatConfig.products.monthly);
+    if (!selected) {
+      throw new SubscriptionError(
+        'Monthly package not found. Check MONTHLY_PRODUCT_ID and RevenueCat offerings.',
+        ErrorCode.PURCHASE_FAILED,
+        true
+      );
+    }
+    const { customerInfo } = await Purchases.purchasePackage(selected);
+    const active = await hasActiveEntitlement(customerInfo);
+    return { success: active };
+  } catch (err) {
+    if (__DEV__) {
+      console.error('purchaseMonthly failed:', err);
+    }
+    if (isPurchaseCancelledError(err)) {
+      return { success: false, cancelled: true };
+    }
+    throw new SubscriptionError(
+      'Monthly purchase failed',
+      ErrorCode.PURCHASE_FAILED,
+      true,
+      err
+    );
   }
-  const { customerInfo } = await Purchases.purchasePackage(selected);
-  return hasActiveEntitlement(customerInfo);
+}
+
+export async function purchaseYearly(): Promise<PurchaseResult> {
+  try {
+    const offerings = await Purchases.getOfferings();
+    const selected = await findPackageByProductId(offerings, RevenueCatConfig.products.yearly);
+    if (!selected) {
+      throw new SubscriptionError(
+        'Yearly package not found. Check YEARLY_PRODUCT_ID and RevenueCat offerings.',
+        ErrorCode.PURCHASE_FAILED,
+        true
+      );
+    }
+    const { customerInfo } = await Purchases.purchasePackage(selected);
+    const active = await hasActiveEntitlement(customerInfo);
+    return { success: active };
+  } catch (err) {
+    if (__DEV__) {
+      console.error('purchaseYearly failed:', err);
+    }
+    if (isPurchaseCancelledError(err)) {
+      return { success: false, cancelled: true };
+    }
+    throw new SubscriptionError(
+      'Yearly purchase failed',
+      ErrorCode.PURCHASE_FAILED,
+      true,
+      err
+    );
+  }
 }
 
 export async function restorePurchasesAndCheck(): Promise<boolean> {
-  const customerInfo = await Purchases.restorePurchases();
-  return hasActiveEntitlement(customerInfo);
+  try {
+    const customerInfo = await Purchases.restorePurchases();
+    return hasActiveEntitlement(customerInfo);
+  } catch (err) {
+    if (__DEV__) {
+      console.error('restorePurchasesAndCheck failed:', err);
+    }
+    throw new SubscriptionError(
+      'Failed to restore purchases',
+      ErrorCode.RESTORE_FAILED,
+      true,
+      err
+    );
+  }
 }
-

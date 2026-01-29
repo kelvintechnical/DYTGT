@@ -210,6 +210,46 @@ Then:
 
 ---
 
+### Testing & Quality
+
+#### Running tests
+
+- **Run once:** `npm test`
+- **Watch mode:** `npm run test:watch`
+- **With coverage report:** `npm run test:coverage`
+
+#### Coverage requirements
+
+- **70%** statements
+- **60%** branches
+
+Open `coverage/lcov-report/index.html` in a browser to view the full coverage report.
+
+#### CI/CD pipeline
+
+An Azure DevOps pipeline runs on every push to `main` and `develop`. The pipeline:
+
+- Runs linting, TypeScript type checking, and tests
+- Enforces coverage gates (tests must pass and meet thresholds)
+- Runs a security audit (`npm audit --audit-level=high`)
+- On `main` only, runs the build stage (EAS build placeholder)
+
+Pipeline link: *(configure your Azure DevOps project and add the pipeline URL here)*
+
+#### Writing tests
+
+- **Location:** Place test files in `__tests__` folders next to the source (e.g. `src/state/__tests__/StreakContext.test.tsx`).
+- **Naming:** `*.test.ts` or `*.test.tsx`.
+- **Patterns:** Use `@testing-library/react-native` (e.g. `render`, `renderHook`, `fireEvent`, `waitFor`, `act`). Mock external dependencies (AsyncStorage, RevenueCat, navigation) in test setup or `jest.mock()`.
+
+#### Error handling
+
+- Async operations are wrapped in try-catch where appropriate.
+- Errors are logged via the `logger` service (`src/services/logger.ts`).
+- React render errors are caught by the root `ErrorBoundary`, which shows a fallback UI and a "Try again" button.
+
+---
+
 ### Build & Run (Native)
 
 For native builds using EAS (recommended):

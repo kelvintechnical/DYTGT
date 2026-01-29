@@ -221,6 +221,30 @@ to consume Colors for full theming.)
   - git push -u origin main
   - Repository URL: https://github.com/kelvintechnical/DYTGT
 
+13) Testing, CI/CD, Error Handling & Observability
+--------------------------------------------------
+- Jest testing infrastructure:
+  - jest.config.js (preset jest-expo, transformIgnorePatterns, setupFilesAfterEnv, collectCoverageFrom, coverageThreshold 70% statements / 60% branches).
+  - jest.setup.js: @testing-library/jest-native/extend-expect, AsyncStorage mock, expo-haptics mock, @env mapped to src/__mocks__/env.js.
+  - Test scripts: test, test:watch, test:coverage. __tests__ under src/state/ and src/__tests__/integration/.
+- StreakContext tests (src/state/__tests__/StreakContext.test.tsx):
+  - Initializes with zero streak when no stored data; loads existing streak from AsyncStorage; increments on first thank and on consecutive day; resets to 1 on non-consecutive day; prevents double thank same day; same calendar day across times; persists to AsyncStorage. Uses renderHook, act(), mocked AsyncStorage.
+- StreakContext logic: added isYesterday and reset-to-1 when breaking streak (non-consecutive day).
+- Environment configuration (react-native-dotenv):
+  - .env.example with RevenueCat and Firebase placeholders. types/env.d.ts for @env. babel.config.js uses dotenv plugin when not in Jest.
+  - src/config/subscriptions.ts refactored to import from @env and export RevenueCatConfig (ios, android, entitlement, products). .env added to .gitignore.
+- Error handling:
+  - src/utils/errors.ts: ErrorCode enum, AppError, SubscriptionError, StorageError.
+  - src/components/ErrorBoundary.tsx: getDerivedStateFromError, componentDidCatch, fallback UI with try again, stack in __DEV__, Colors + PrimaryButton.
+  - App.tsx wrapped in ErrorBoundary. Optional error prop on SubscriptionContext and StreakContext value types.
+- RevenueCatClient error handling:
+  - configureRevenueCat / checkEntitlements / purchaseMonthly / purchaseYearly / restorePurchasesAndCheck wrapped in try-catch; SubscriptionError and ErrorCode; purchaseMonthly/Yearly return PurchaseResult { success, cancelled? }; PaywallScreen updated for PurchaseResult.
+- Azure DevOps: azure-pipelines.yml with Validate (lint, tsc, test+coverage, JUnit/Cobertura), Security (npm audit), Build on main (EAS placeholder); triggers main/develop, exclude README; NODE_VERSION, EXPO_VERSION. ESLint + jest-junit added for pipeline.
+- Logging: src/services/logger.ts with ILogger, ConsoleLogger (timestamp, level, ANSI colors, dev vs prod), singleton logger; TODOs for Application Insights, Sentry, LogRocket.
+- Logging in contexts: SubscriptionContext and StreakContext log config, entitlements, onboarded, streak load/mark/persist, and errors.
+- Integration test: src/__tests__/integration/PurchaseFlow.test.tsx (happy path flow test; full-render test skipped where Hermes/Flow parse fails).
+- README: "Testing & Quality" section (running tests, coverage requirements, CI/CD, writing tests, error handling).
+
 Current Status (High-Level)
 ---------------------------
 - Expo + TypeScript app scaffold is complete and pushed to GitHub.
@@ -232,8 +256,12 @@ Current Status (High-Level)
 - The daily loop:
   - Respects subscription/trial gating (Home redirects to Paywall if not entitled).
   - Ensures the "I Thanked God Today" button is both gated by subscription and limited to one tap per day.
+- Testing & quality:
+  - Jest + React Native Testing Library; StreakContext tests; purchase flow integration test; coverage thresholds; Azure DevOps pipeline; ESLint.
+- Observability & robustness:
+  - Logger service; ErrorBoundary; AppError/SubscriptionError/StorageError; env via react-native-dotenv and RevenueCatConfig.
 - Remaining major work:
   - Wire real Firebase Authentication.
-  - Replace placeholder RevenueCat keys and product identifiers with production values.
+  - Replace placeholder RevenueCat keys and product identifiers with production values (use .env from .env.example).
   - Optionally add cloud sync for streaks and preferences.
 
