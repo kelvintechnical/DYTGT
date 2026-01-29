@@ -1,7 +1,8 @@
 import React, { useEffect } from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import ScreenContainer from '../components/ScreenContainer';
-import PrimaryButton from '../components/PrimaryButton';
+import AnimatedPrimaryButton from '../components/AnimatedPrimaryButton';
+import StreakCircle from '../components/StreakCircle';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../navigation';
 import { getVerseForToday } from '../data/dailyVerses';
@@ -28,6 +29,19 @@ export default function HomeScreen({ navigation }: Props) {
     }
   };
 
+  const buttonLabel = !isSubscribedOrOnTrial
+    ? 'Subscription required'
+    : hasThankedToday
+    ? 'You thanked God today'
+    : 'I Thanked God Today';
+
+  const buttonDisabled = hasThankedToday || !isSubscribedOrOnTrial;
+  const buttonA11yLabel = !isSubscribedOrOnTrial
+    ? 'Subscription required. Tap to view subscription options.'
+    : hasThankedToday
+    ? 'You thanked God today. Button is disabled until tomorrow.'
+    : 'I Thanked God Today. Double tap to mark today as complete.';
+
   return (
     <ScreenContainer>
       <View style={styles.header}>
@@ -42,20 +56,28 @@ export default function HomeScreen({ navigation }: Props) {
         <Text style={styles.reflection}>{verse.reflection}</Text>
       </View>
       <View style={styles.footer}>
-        <PrimaryButton
-          label={
-            !isSubscribedOrOnTrial
-              ? 'Subscription required'
-              : hasThankedToday
-              ? 'You thanked God today'
-              : 'I Thanked God Today'
-          }
+        {/* Streak progress circle */}
+        <View style={styles.streakContainer}>
+          <StreakCircle
+            currentStreak={currentStreak}
+            accessibilityLabel={`${currentStreak} day streak. Progress toward 30-day goal.`}
+          />
+        </View>
+        {/* Daily gratitude button */}
+        <AnimatedPrimaryButton
+          label={buttonLabel}
           onPress={handleThanked}
-          disabled={hasThankedToday || !isSubscribedOrOnTrial}
+          disabled={buttonDisabled}
+          accessibilityLabel={buttonA11yLabel}
+          accessibilityHint={
+            buttonDisabled
+              ? undefined
+              : 'Marks today as complete and increments your streak counter'
+          }
         />
         <Text style={styles.footerText}>
           {isSubscribedOrOnTrial
-            ? 'One thank-you a day is enough. When you’re ready, come back tomorrow.'
+            ? 'One thank-you a day is enough. When you're ready, come back tomorrow.'
             : 'Start your free trial to thank God once a day with a verse and reflection.'}
         </Text>
       </View>
@@ -102,6 +124,10 @@ const styles = StyleSheet.create({
   footer: {
     paddingBottom: 24,
     gap: 8,
+  },
+  streakContainer: {
+    alignItems: 'center',
+    marginBottom: 8,
   },
   footerText: {
     fontSize: 12,

@@ -12,10 +12,13 @@ No feeds, no noise—just Scripture, reflection, and a growing streak of daily g
   - One carefully chosen verse per day (static JSON for the MVP).
   - A 1–2 sentence reflection to gently prompt gratitude.
 - **Single daily action**
-  - An **“I Thanked God Today”** button that can be tapped once per day.
+  - An **"I Thanked God Today"** button that can be tapped once per day.
+  - Animated button with scale feedback and haptic vibration on supported devices.
+  - Button label changes to "You thanked God today" after completion.
   - Locks after completion to keep the practice simple and intentional.
 - **Streaks**
   - Local streak counter that tracks consecutive days of gratitude.
+  - Circular progress indicator on the home screen showing progress toward a 30-day streak goal.
   - Simple streak summary screen to celebrate consistency.
 - **Onboarding & Authentication**
   - Lightweight onboarding that explains the rhythm of the app.
@@ -51,6 +54,10 @@ No feeds, no noise—just Scripture, reflection, and a growing streak of daily g
 - **State & Storage**:
   - React Context for subscription and streak state.
   - `@react-native-async-storage/async-storage` for local persistence.
+- **UI & Animations**:
+  - `react-native-svg` for circular streak progress visualization.
+  - `expo-haptics` for tactile feedback on button interactions.
+  - React Native Animated API for smooth button press animations.
 - **Auth (planned)**: Firebase Authentication
   - Anonymous
   - Apple
@@ -119,8 +126,10 @@ DYTGT/
     navigation/
       index.tsx              # Root stack navigator
     components/
-      PrimaryButton.tsx      # Reusable primary CTA button
-      ScreenContainer.tsx    # Shared layout & safe area wrapper
+      PrimaryButton.tsx         # Reusable primary CTA button
+      AnimatedPrimaryButton.tsx # Animated button with haptic feedback
+      StreakCircle.tsx          # Circular progress indicator for streak progress
+      ScreenContainer.tsx       # Shared layout & safe area wrapper
     screens/
       OnboardingScreen.tsx   # Intro to the daily rhythm
       AuthScreen.tsx         # Anonymous / Apple / Google auth stubs
